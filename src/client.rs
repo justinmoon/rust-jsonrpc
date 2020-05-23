@@ -23,15 +23,15 @@ use std::io;
 use std::io::Read;
 use std::sync::{Arc, Mutex};
 
-use hyper;
 use hyper::client::Client as HyperClient;
 use hyper::header::{Authorization, Basic, ContentType, Headers};
+use hyper_socks::Socks5HttpConnector;
 use serde;
 use serde_json;
 
 use super::{Request, Response};
-use util::HashableValue;
 use error::Error;
+use util::HashableValue;
 
 /// A handle to a remote JSONRPC server
 pub struct Client {
@@ -44,15 +44,29 @@ pub struct Client {
 
 impl Client {
     /// Creates a new client
-    pub fn new(url: String, user: Option<String>, pass: Option<String>) -> Client {
+    pub fn new(
+        url: String,
+        user: Option<String>,
+        pass: Option<String>,
+        socks_proxy: Option<String>,
+    ) -> Client {
         // Check that if we have a password, we have a username; other way around is ok
         debug_assert!(pass.is_none() || user.is_some());
+
+        // Set socks proxy if it exists
+        let client = match socks_proxy {
+            Some(proxy) => {
+                let connector = Socks5HttpConnector::new(&proxy).unwrap();
+                HyperClient::with_connector(connector)
+            }
+            None => HyperClient::new(),
+        };
 
         Client {
             url: url,
             user: user,
             pass: pass,
-            client: HyperClient::new(),
+            client,
             nonce: Arc::new(Mutex::new(0)),
         }
     }

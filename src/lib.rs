@@ -29,6 +29,7 @@
 #![warn(missing_docs)]
 
 extern crate hyper;
+extern crate hyper_socks;
 
 extern crate serde;
 #[macro_use]
